@@ -42,6 +42,27 @@ async function run() {
       });
       res.json(result);
     });
+    // my booking data
+    app.get("/my-ideas", async (req, res) => {
+      const userId = req.query.userId;
+
+      if (!userId) {
+        return res.status(400).send({
+          message: "userId is required",
+        });
+      }
+
+      try {
+        const result = await ideaVaultCollection.find({ userId }).toArray();
+
+        res.send(result);
+      } catch (error) {
+        res.status(500).send({
+          message: "Failed to fetch user ideas",
+          error,
+        });
+      }
+    });
 
     app.post("/idea", async (req, res) => {
       const ideaData = req.body;
