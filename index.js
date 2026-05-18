@@ -30,7 +30,6 @@ async function run() {
       res.json(result);
     });
 
-
     app.get("/idea", async (req, res) => {
       const result = await ideaVaultCollection.find().toArray();
       res.json(result);
@@ -49,6 +48,48 @@ async function run() {
       console.log(ideaData);
       const result = await ideaVaultCollection.insertOne(ideaData);
       res.json(result);
+    });
+
+    // search implement
+    app.get("/ideas/search", async (req, res) => {
+      const query = req.query.q;
+
+      const result = await ideaVaultCollection
+        .find({
+          title: {
+            $regex: query,
+            $options: "i",
+          },
+        })
+        .toArray();
+
+      res.send(result);
+    });
+
+    // category filtaring
+    app.get("/ideas/filter", async (req, res) => {
+      try {
+        const { category, startDate, endDate } = req.query;
+
+        let query = {};
+
+        if (category) {
+          query.category = category;
+        }
+
+        if (startDate && endDate) {
+          query.createdAt = {
+            $gte: new Date(startDate),
+            $lte: new Date(endDate),
+          };
+        }
+
+        const result = await ideaVaultCollection.find(query).toArray();
+
+        res.send(result);
+      } catch (error) {
+        res.status(500).send({ message: "Server error" });
+      }
     });
 
     await client.db("admin").command({ ping: 1 });
