@@ -24,6 +24,13 @@ async function run() {
     const db = client.db("ideavault");
     const ideaVaultCollection = db.collection("ideas");
 
+    // trending section
+    app.get("/trending", async (req, res) => {
+      const result = await ideaVaultCollection.find().limit(3).toArray();
+      res.json(result);
+    });
+
+
     app.get("/idea", async (req, res) => {
       const result = await ideaVaultCollection.find().toArray();
       res.json(result);
