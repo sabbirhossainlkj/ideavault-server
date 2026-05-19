@@ -64,6 +64,65 @@ async function run() {
       }
     });
 
+    // idea update data
+    app.patch("/idea/:id", async (req, res) => {
+      const { id } = req.params;
+      console.log(id);
+      const userId = req.query.userId;
+      const updatedData = req.body;
+
+      if (!userId) {
+        return res.status(400).send({
+          success: false,
+          message: "userId is required",
+        });
+      }
+
+      try {
+        const filter = {
+          _id: new ObjectId(id),
+          userId: userId,
+        };
+
+        const updatedDoc = {
+          $set: {
+            title: updatedData.title,
+            shortDescription: updatedData.shortDescription,
+            detailedDescription: updatedData.detailedDescription,
+            category: updatedData.category,
+            tags: updatedData.tags,
+            imageUrl: updatedData.imageUrl,
+            estimatedBudget: updatedData.estimatedBudget,
+            targetAudience: updatedData.targetAudience,
+            problemStatement: updatedData.problemStatement,
+            proposedSolution: updatedData.proposedSolution,
+          },
+        };
+
+        const result = await ideaVaultCollection.updateOne(filter, updatedDoc);
+
+        if (result.matchedCount === 0) {
+          return res.status(404).send({
+            success: false,
+            message: "Idea not found or unauthorized",
+          });
+        }
+
+        res.send({
+          success: true,
+          message: "Idea updated successfully",
+          result,
+        });
+      } catch (error) {
+        res.status(500).send({
+          success: false,
+          message: "Failed to update idea",
+          error: error.message,
+        });
+      }
+    });
+
+
     app.post("/idea", async (req, res) => {
       const ideaData = req.body;
       console.log(ideaData);
@@ -71,7 +130,6 @@ async function run() {
       res.json(result);
     });
 
-    // search implement
     app.get("/ideas/search", async (req, res) => {
       const query = req.query.q;
 
