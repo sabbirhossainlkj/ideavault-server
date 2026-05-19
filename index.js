@@ -24,6 +24,7 @@ async function run() {
     const db = client.db("ideavault");
     const ideaVaultCollection = db.collection("ideas");
     const commentsCollection = db.collection("comments");
+
     // comments post
     app.post("/comment", async (req, res) => {
       const commentData = req.body;
@@ -31,11 +32,92 @@ async function run() {
       const result = await commentsCollection.insertOne(commentData);
       res.json(result);
     });
-    
+
     // comment data get
     app.get("/comment", async (req, res) => {
       const result = await commentsCollection.find().toArray();
       res.json(result);
+    });
+
+    // comment update
+     app.patch("/comment/:id", async (req, res) => {
+      const { id } = req.params;
+      const updateData = req.body;
+      console.log(updateData);
+      const result = await commentsCollection.updateOne(
+        { _id: new ObjectId(id) },
+        { $set: updateData },
+      );
+      res.json(result);
+    });
+    // comment delete
+    app.delete("/comment/:id", async (req, res) => {
+      const { id } = req.params;
+      const userId = req.query.userId;
+
+      if (!userId) {
+        return res.status(400).send({
+          success: false,
+          message: "userId is required",
+        });
+      }
+
+      try {
+        const query = {
+          _id: new ObjectId(id),
+          userId: userId,
+        };
+
+        const result = await commentsCollection.deleteOne(query);
+
+        if (result.deletedCount === 0) {
+          return res.status(404).send({
+            success: false,
+            message: "Comment not found or unauthorized",
+          });
+        }
+
+        res.send({
+          success: true,
+          message: "Comment deleted successfully",
+          result,
+        });
+      } catch (error) {
+        res.status(500).send({
+          success: false,
+          message: "Failed to delete comment",
+          error: error.message,
+        });
+      }
+    });
+
+    // my intarection
+    app.get("/my-interactions", async (req, res) => {
+      const userId = req.query.userId;
+
+      try {
+        const result = await commentsCollection
+          .aggregate([
+            {
+              $match: {
+                userId,
+              },
+            },
+            {
+              $lookup: {
+                from: "ideaVault",
+                localField: "ideaId",
+                foreignField: "_id",
+                as: "idea",
+              },
+            },
+          ])
+          .toArray();
+
+        res.send(result);
+      } catch (error) {
+        res.send(error);
+      }
     });
 
     // trending section
