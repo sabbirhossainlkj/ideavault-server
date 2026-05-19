@@ -64,7 +64,7 @@ async function run() {
       }
     });
 
-    // idea update data
+    //idea update data
     app.patch("/idea/:id", async (req, res) => {
       const { id } = req.params;
       console.log(id);
@@ -122,7 +122,55 @@ async function run() {
       }
     });
 
+    // my idea delete
+    app.delete("/idea/:id", async (req, res) => {
+      const { id } = req.params;
+      const userId = req.query.userId;
 
+      console.log("Delete ID:", id);
+
+      if (!userId) {
+        return res.status(400).send({
+          success: false,
+          message: "userId is required",
+        });
+      }
+
+      if (!ObjectId.isValid(id)) {
+        return res.status(400).send({
+          success: false,
+          message: "Invalid idea id",
+        });
+      }
+
+      try {
+        const filter = {
+          _id: new ObjectId(id),
+          userId: userId,
+        };
+
+        const result = await ideaVaultCollection.deleteOne(filter);
+
+        if (result.deletedCount === 0) {
+          return res.status(404).send({
+            success: false,
+            message: "Idea not found or unauthorized",
+          });
+        }
+
+        res.send({
+          success: true,
+          message: "Idea deleted successfully",
+          result,
+        });
+      } catch (error) {
+        res.status(500).send({
+          success: false,
+          message: "Failed to delete idea",
+          error: error.message,
+        });
+      }
+    });
     app.post("/idea", async (req, res) => {
       const ideaData = req.body;
       console.log(ideaData);
