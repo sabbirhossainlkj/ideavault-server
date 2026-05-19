@@ -23,23 +23,45 @@ async function run() {
     await client.connect();
     const db = client.db("ideavault");
     const ideaVaultCollection = db.collection("ideas");
+    const commentsCollection = db.collection("comments");
+    // comments post
+    app.post("/comment", async (req, res) => {
+      const commentData = req.body;
+      console.log(commentData);
+      const result = await commentsCollection.insertOne(commentData);
+      res.json(result);
+    });
+    
+    // comment data get
+    app.get("/comment", async (req, res) => {
+      const result = await commentsCollection.find().toArray();
+      res.json(result);
+    });
 
     // trending section
     app.get("/trending", async (req, res) => {
       const result = await ideaVaultCollection.find().limit(3).toArray();
       res.json(result);
     });
-
+    // idea data ger
     app.get("/idea", async (req, res) => {
       const result = await ideaVaultCollection.find().toArray();
       res.json(result);
     });
-
+    // daynamic idea data
     app.get("/idea/:id", async (req, res) => {
       const { id } = req.params;
       const result = await ideaVaultCollection.findOne({
         _id: new ObjectId(id),
       });
+      res.json(result);
+    });
+
+    // idea post
+    app.post("/idea", async (req, res) => {
+      const ideaData = req.body;
+      console.log(ideaData);
+      const result = await ideaVaultCollection.insertOne(ideaData);
       res.json(result);
     });
     // my booking data
@@ -171,13 +193,8 @@ async function run() {
         });
       }
     });
-    app.post("/idea", async (req, res) => {
-      const ideaData = req.body;
-      console.log(ideaData);
-      const result = await ideaVaultCollection.insertOne(ideaData);
-      res.json(result);
-    });
 
+    // all ideas search
     app.get("/ideas/search", async (req, res) => {
       const query = req.query.q;
 
@@ -185,7 +202,6 @@ async function run() {
         .find({
           title: {
             $regex: query,
-            $options: "i",
           },
         })
         .toArray();
