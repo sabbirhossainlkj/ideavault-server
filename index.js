@@ -2,6 +2,7 @@ const express = require("express");
 const dotenv = require("dotenv");
 const cors = require("cors");
 const { MongoClient, ServerApiVersion, ObjectId } = require("mongodb");
+const { createRemoteJWKSet, jwtVerify } = require("jose-cjs");
 dotenv.config();
 const uri = process.env.MONGODB_URI;
 const app = express();
@@ -18,6 +19,31 @@ const client = new MongoClient(uri, {
   },
 });
 
+const JWKS = createRemoteJWKSet(new URL("http://localhost:3000/api/auth/jwks"));
+
+// mideller
+const verifyToken = async (req, res, next) => {
+  const authHeader = req?.headers.authorization;
+  if (!authHeader) {
+    return res.status(401).json({
+      message: "unauthorized",
+    });
+  }
+  const token = authHeader.split(" ")[1];
+  if (!token) {
+    return res.status(401).json({
+      message: "unauthorized",
+    });
+  }
+  try {
+    const { payload } = await jwtVerify(token, JWKS);
+    console.log(payload);
+    next();
+  } catch (error) {
+    return res.status(401).json({ message: "forbidden" });
+  }
+};
+
 async function run() {
   try {
     await client.connect();
@@ -26,7 +52,7 @@ async function run() {
     const commentsCollection = db.collection("comments");
 
     // comments post
-    app.post("/comment", async (req, res) => {
+    app.post("/comment",verifyToken, async (req, res) => {
       const commentData = req.body;
       console.log(commentData);
       const result = await commentsCollection.insertOne(commentData);
@@ -34,13 +60,13 @@ async function run() {
     });
 
     // comment data get
-    app.get("/comment", async (req, res) => {
+    app.get("/comment",verifyToken, async (req, res) => {
       const result = await commentsCollection.find().toArray();
       res.json(result);
     });
 
     // comment update
-     app.patch("/comment/:id", async (req, res) => {
+    app.patch("/comment/:id",verifyToken, async (req, res) => {
       const { id } = req.params;
       const updateData = req.body;
       console.log(updateData);
@@ -51,7 +77,7 @@ async function run() {
       res.json(result);
     });
     // comment delete
-    app.delete("/comment/:id", async (req, res) => {
+    app.delete("/comment/:id",verifyToken, async (req, res) => {
       const { id } = req.params;
       const userId = req.query.userId;
 
@@ -92,7 +118,7 @@ async function run() {
     });
 
     // my intarection
-    app.get("/my-interactions", async (req, res) => {
+    app.get("/my-interactions",verifyToken, async (req, res) => {
       const userId = req.query.userId;
 
       try {
@@ -125,13 +151,13 @@ async function run() {
       const result = await ideaVaultCollection.find().limit(3).toArray();
       res.json(result);
     });
-    // idea data ger
+    // idea data get
     app.get("/idea", async (req, res) => {
       const result = await ideaVaultCollection.find().toArray();
       res.json(result);
     });
-    // daynamic idea data
-    app.get("/idea/:id", async (req, res) => {
+    // daynamic idea details data
+    app.get("/idea/:id", verifyToken, async (req, res) => {
       const { id } = req.params;
       const result = await ideaVaultCollection.findOne({
         _id: new ObjectId(id),
@@ -140,14 +166,15 @@ async function run() {
     });
 
     // idea post
-    app.post("/idea", async (req, res) => {
+    app.post("/idea", verifyToken, async (req, res) => {
       const ideaData = req.body;
       console.log(ideaData);
       const result = await ideaVaultCollection.insertOne(ideaData);
       res.json(result);
     });
-    // my booking data
-    app.get("/my-ideas", async (req, res) => {
+
+    // my ideas booking data
+    app.get("/my-ideas",verifyToken, async (req, res) => {
       const userId = req.query.userId;
 
       if (!userId) {
@@ -169,7 +196,7 @@ async function run() {
     });
 
     //idea update data
-    app.patch("/idea/:id", async (req, res) => {
+    app.patch("/idea/:id",verifyToken, async (req, res) => {
       const { id } = req.params;
       console.log(id);
       const userId = req.query.userId;
@@ -227,7 +254,7 @@ async function run() {
     });
 
     // my idea delete
-    app.delete("/idea/:id", async (req, res) => {
+    app.delete("/idea/:id",verifyToken, async (req, res) => {
       const { id } = req.params;
       const userId = req.query.userId;
 
